@@ -153,7 +153,8 @@ def predict_datapoint():
             SLSignal_heiken=float(request.form.get('slsignal_heiken', 0)),
             EMASignal1=int(request.form.get('emasignal1', 0)),
             long_signal=int(request.form.get('long_signal', 0)),
-            martiangle_signal=int(request.form.get('martiangle_signal', 0))
+            martiangle_signal=int(request.form.get('martiangle_signal', 0)),
+            Candle_direction=int(request.form.get('Candle_direction', 0))
         )
         
         # Perform prediction

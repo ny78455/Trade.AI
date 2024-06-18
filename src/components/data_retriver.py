@@ -44,7 +44,7 @@ class DataTransformation:
                                  "fractals_low", "VSignal", "PriceSignal", 
                                  "TotSignal", "SLSignal", "grid_signal", 
                                  "ordersignal", "SLSignal_heiken", "EMASignal1", 
-                                 "long_signal", "martiangle_signal"]
+                                 "long_signal", "martiangle_signal","Candle_direction"]
 
             num_pipeline = Pipeline(
                 steps=[
@@ -54,12 +54,12 @@ class DataTransformation:
             )
 
             cat_pipeline = Pipeline(
-                steps=[
-                    ("imputer", SimpleImputer(strategy="most_frequent")),
-                    ("one_hot_encoder", OneHotEncoder()),
-                    ("scaler", StandardScaler(with_mean=False))
-                ]
-            )
+    steps=[
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("one_hot_encoder", OneHotEncoder(categories="auto", sparse=False)),
+        ("scaler", StandardScaler())
+    ]
+)
 
             logging.info(f"Categorical columns: {categorical_columns}")
             logging.info(f"Numerical columns: {numerical_columns}")
@@ -86,7 +86,7 @@ class DataTransformation:
 
             preprocessing_obj = self.get_data_transformer_object()
 
-            target_column_name = "Candle_direction"
+            target_column_name = "master_signal"
             numerical_columns = ["Year", "Month", "Day", "Hour", "Minute"]
 
             input_feature_train_df = train_df.drop(columns=[target_column_name], axis=1)
@@ -138,14 +138,14 @@ class ModelTrainer:
 
             # Initialize the NN
             model = Sequential()
-            model.add(Dense(128, input_dim=X_train.shape[1], kernel_initializer=keras.initializers.random_normal(seed=13), activation="relu"))
-            model.add(Dense(64, kernel_initializer=keras.initializers.random_normal(seed=13), activation="relu"))
-            model.add(Dense(32, kernel_initializer=keras.initializers.random_normal(seed=13), activation="relu"))
-            model.add(Dense(1, activation="sigmoid"))
+            model.add(Dense(128, input_dim=X_train.shape[1], activation="relu"))
+            model.add(Dense(64, activation="relu"))
+            model.add(Dense(32, activation="relu"))
+            model.add(Dense(3, activation="softmax"))
 
             # Compiling the ANN with a custom optimizer
             opt = Adam(learning_rate=0.0001)
-            model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
+            model.compile(optimizer=opt, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
             # Train the ANN with validation split and early stopping callback
             history = model.fit(X_train, y_train, batch_size=256, epochs=800, validation_split=0.1)
@@ -155,13 +155,13 @@ class ModelTrainer:
 
             # Evaluate the model on the test set
             predicted_prob = model.predict(X_test)
-            predicted_class = (predicted_prob > 0.5).astype(int)
+            predicted_class = np.argmax(predicted_prob, axis=1)
 
             # Log the predicted values and actual values
             logging.info("Predicted probabilities: {}".format(predicted_prob.flatten()))
             logging.info("Predicted classes: {}".format(predicted_class.flatten()))
             logging.info("Actual values: {}".format(y_test))
-            df_predicted_prob = pd.DataFrame(predicted_prob, columns=['Prediction'])
+            df_predicted_prob = pd.DataFrame(predicted_class.flatten(), columns=['Prediction'])
             df_predicted_prob.to_csv(os.path.join('artifacts', 'predicted_probablity.csv'), index=False)
 
             # Logging to a file

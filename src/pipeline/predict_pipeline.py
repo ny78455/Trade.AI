@@ -17,7 +17,7 @@ class PredictPipeline:
             
             # Make predictions directly on input data
             EX = pd.read_csv(os.path.join('artifacts','test.csv'))
-            X_test = EX.drop(['Candle_direction'],axis='columns')
+            X_test = EX.drop(['master_signal'],axis='columns')
             y_pred = model.predict(X_test)
             y_pred_series = pd.Series(y_pred.flatten())
             y_pred_mean=y_pred_series.mean()*0.1
@@ -36,7 +36,7 @@ class CustomData:
                  SL, TP, MinSwing, MaxSwing, LBD_detected, LBH_detected, SR_signal, isBreakOut, candlestick_signal,
                  result, signal1, buy_signal, Position, sell_signal, fractal_high, fractal_low, buy_signal1, 
                  sell_signal1, fractals_high, fractals_low, VSignal, PriceSignal, TotSignal, SLSignal, grid_signal,
-                 ordersignal, SLSignal_heiken, EMASignal1, long_signal, martiangle_signal):
+                 ordersignal, SLSignal_heiken, EMASignal1, long_signal, martiangle_signal, Candle_direction):
         
         self.Year = Year
         self.Month = Month
@@ -77,6 +77,7 @@ class CustomData:
         self.EMASignal1 = EMASignal1
         self.long_signal = long_signal
         self.martiangle_signal = martiangle_signal
+        self.Candle_direction = Candle_direction
 
     def get_data_as_array(self):
         try:
@@ -88,7 +89,7 @@ class CustomData:
                               self.fractal_low, self.buy_signal1, self.sell_signal1, self.fractals_high, 
                               self.fractals_low, self.VSignal, self.PriceSignal, self.TotSignal, self.SLSignal, 
                               self.grid_signal, self.ordersignal, self.SLSignal_heiken, self.EMASignal1, 
-                              self.long_signal, self.martiangle_signal]])
+                              self.long_signal, self.martiangle_signal, self.Candle_direction]])
         except Exception as e:
             raise CustomException(e, sys)
 

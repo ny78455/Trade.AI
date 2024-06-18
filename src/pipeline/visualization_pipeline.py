@@ -17,10 +17,10 @@ class RunVisPipeline:
         try:
             model = tf.keras.models.load_model(self.model_path)
             EX = pd.read_csv(os.path.join('artifacts', 'test.csv'))
-            X_test = EX.drop(['Candle_direction'], axis='columns')
+            X_test = EX.drop(['master_signal'], axis='columns')
             y_pred_series = pd.read_csv(os.path.join('artifacts', 'predicted_probablity.csv'))
-            y_pred_mean = y_pred_series.mean()
-            y_pred_new = (y_pred_series > y_pred_mean*MF).astype(int)
+            #y_pred_mean = y_pred_series.mean()
+            y_pred_new = y_pred_series
             y_pred_new.columns = ['Prediction']  # Rename prediction column
 
             X_test_new = X_test.reset_index(drop=True)
@@ -29,9 +29,9 @@ class RunVisPipeline:
             # Logging predictions and features
             logging.info(f'X_test_new: {X_test_new}')
             logging.info(f'y_pred_new_series: {y_pred_new_series}')
-            logging.info(f'y_pred_mean: {y_pred_mean}')
+            #logging.info(f'y_pred_mean: {y_pred_mean}')
 
-            return X_test_new, y_pred_new_series, y_pred_mean
+            return X_test_new, y_pred_new_series
         except Exception as e:
             raise CustomException(e, sys)
 
@@ -64,7 +64,7 @@ class RunVisPipeline:
 
             concatenated_df.set_index('Datetime', inplace=True)
 
-            #concatenated_df.to_csv('check2.csv')
+            concatenated_df.to_csv('check2.csv')
 
             data = pd.read_csv(os.path.join('artifacts', 'df_new.csv'))
             logging.info(f'concatdf: {concatenated_df}')
@@ -74,26 +74,28 @@ class RunVisPipeline:
 
             concatenated_df_new = data.merge(concatenated_df, left_index=True, right_index=True, how='left')
 
-            #concatenated_df_new.to_csv('check1.csv')
-
             concatenated_df_new = concatenated_df_new.drop(columns=['EMASignal', 'isPivot', 'CHOCH_pattern_detected',
                                   'fibonacci_signal','MinSwing','MaxSwing','SL','TP',
                                  'LBD_detected','LBH_detected','SR_signal','isBreakOut','candlestick_signal',
                                  'result','signal1','buy_signal','Position','sell_signal','fractal_high',
                                  'fractals_low','VSignal','PriceSignal','TotSignal','SLSignal','grid_signal',
                                  'ordersignal','SLSignal_heiken','EMASignal1','long_signal','martiangle_signal',
-                                                     'fractal_low','buy_signal1','sell_signal1','fractals_high'])
+                                                     'fractal_low','buy_signal1','sell_signal1','fractals_high','Candle_direction'])
             
             concatenated_df_new = concatenated_df_new.fillna(0)
             concatenated_df_new['Prediction'] = concatenated_df_new['Prediction'].astype(int)
 
             def pointpos(x):
                 if x['Prediction'] == 1:
-                    return (x['Low'] + 0.5)
+                    return (x['Low'] + 0.5e-3)
+                elif x['Prediction'] == 2: 
+                    return (x['Low'] + 0.5e-3)   
                 else:
                     return np.nan
 
             concatenated_df_new['pointpos'] = concatenated_df_new.apply(lambda row: pointpos(row), axis=1)
+
+            concatenated_df_new.to_csv('check1.csv')
 
             logging.info(f'concatdfn: {concatenated_df_new}')
             logging.info(concatenated_df_new[concatenated_df_new['Prediction'] != 0])
@@ -105,17 +107,13 @@ class RunVisPipeline:
             # Filter based on datetime range
             concatenated_df_new_filtered = concatenated_df_new.loc[x:y]
 
-            fig = go.Figure()
-
-            # Add candlestick chart
-            fig.add_trace(go.Candlestick(
+            fig = go.Figure(data=[go.Candlestick(
                 x=concatenated_df_new_filtered.index,
                 open=concatenated_df_new_filtered['Open'],
                 high=concatenated_df_new_filtered['High'],
                 low=concatenated_df_new_filtered['Low'],
-                close=concatenated_df_new_filtered['Close'],
-                name='Candlestick'
-            ))
+                close=concatenated_df_new_filtered['Close']
+            )])
 
             # Add moving averages
             fig.add_trace(go.Scatter(
@@ -136,12 +134,17 @@ class RunVisPipeline:
 
             # Add prediction points
             fig.add_trace(go.Scatter(
-                x=concatenated_df_new_filtered.index,
-                y=concatenated_df_new_filtered['pointpos'],
-                mode="markers",
-                marker=dict(size=8, color="MediumPurple", line=dict(width=1, color='DarkSlateGrey')),
-                name="Signal"
-            ))
+    x=concatenated_df_new_filtered.index,
+    y=concatenated_df_new_filtered['pointpos'],
+    mode="markers",
+    marker=dict(
+        size=8,
+        color=np.where(concatenated_df_new_filtered['Prediction'] == 1, "red",
+                       np.where(concatenated_df_new_filtered['Prediction'] == 2, "purple", "blue")),
+        line=dict(width=1, color='DarkSlateGrey')
+    ),
+    name="Signal"
+))
 
             # Add volume bars
             fig.add_trace(go.Bar(
@@ -227,8 +230,12 @@ class RunVisPipeline:
 
     def run_pipeline(self, MF=1.0, x=None, y=None):
         try:
-            X_test_new, y_pred_new_series, y_pred_mean = self.predict(MF=MF)
+            X_test_new, y_pred_new_series = self.predict(MF=MF)
             concatenated_df = self.concatenate_predictions_with_features(X_test_new, y_pred_new_series)
             self.preprocess_and_visualize(concatenated_df, x=x, y=y)
         except Exception as e:
             raise CustomException(e, sys)
+        
+if __name__ == "__main__":
+    train_pipeline = RunVisPipeline()
+    train_pipeline.run_pipeline()

@@ -1222,7 +1222,7 @@ class DataProcessor:
         self.df['Trend'].fillna('4.0', inplace=True)
         self.df['Strategy Returns'].dropna(inplace=True)
 
-    '''def process_candle_direction(self):
+    def process_candle_direction(self):
         # Calculate the difference between the current 'Close' and the previous 'Close'
         self.df['Close_diff'] = self.df['Close'].diff()
 
@@ -1236,17 +1236,17 @@ class DataProcessor:
         self.df['Candle_direction'].replace({'Up': 1, 'Down': 2}, inplace=True)
 
         # Drop the 'Close_diff' column if you don't need it anymore
-        self.df.drop(columns=['Close_diff'], inplace=True)'''
+        self.df.drop(columns=['Close_diff'], inplace=True)
     
-    def process_candle_direction(self):
+    '''def process_candle_direction(self):
     # Calculate the difference between the next 'Close' and the current 'Close'
         self.df['Next_Close_diff'] = self.df['Close'].shift(-1) - self.df['Close']
 
     # Create a new column 'Candle_direction' that indicates if the next candle is higher
-        self.df['Candle_direction'] = (self.df['Next_Close_diff'] > 0).astype(int)
+        self.df['Candle_direction'] = (self.df['Next_Close_diff'] < 0).astype(int)
 
     # Drop the 'Next_Close_diff' column if you don't need it anymore
-        self.df.drop(columns=['Next_Close_diff'], inplace=True)
+        self.df.drop(columns=['Next_Close_diff'], inplace=True)'''
 
 
     def clean_dataframe(self):
@@ -1261,6 +1261,19 @@ class DataProcessor:
     def replace_candle_direction(self):
         self.df_cleaned['Candle_direction'] = self.df_cleaned['Candle_direction'].replace(2, 0)
         self.df_cleaned['Candle_direction'] = self.df_cleaned['Candle_direction'].replace(2, 1)
+
+    def create_master_signal(self):
+
+        self.df_cleaned['master_signal'] = 0
+    
+    # Identify consecutive patterns in 'Candle_direction'
+        consecutive_zeros = self.df_cleaned['Candle_direction'].rolling(3).sum() == 0
+        self.df_cleaned.loc[consecutive_zeros.shift(-3).fillna(False), 'master_signal'] = 1
+    
+        consecutive_ones = self.df_cleaned['Candle_direction'].rolling(3).sum() == 3
+        self.df_cleaned.loc[consecutive_ones.shift(-3).fillna(False), 'master_signal'] = 2
+
+    
 
     def convert_boolean_to_int(self):
         boolean_columns = [
@@ -1290,6 +1303,8 @@ class DataProcessor:
         self.df_cleaned['fractals_high'] = self.df_cleaned['fractals_high'].apply(lambda x: 1 if x > mean_column3 else 0)
         self.df_cleaned['fractals_low'] = self.df_cleaned['fractals_low'].apply(lambda x: 1 if x > mean_column4 else 0)
         self.df_cleaned['SLSignal_heiken'] = self.df_cleaned['SLSignal_heiken'].apply(lambda x: 1 if x > mean_column5 else 0)
+        self.df_cleaned['SLSignal'] = self.df_cleaned['SLSignal'].apply(lambda x: 1 if x != 0 else x)
+
 
     def save_to_csv(self):
         self.df_cleaned.to_csv(os.path.join('artifacts', 'df_cleaned.csv'), index=False)
@@ -1298,10 +1313,11 @@ class DataProcessor:
         self.fill_missing_values()
         self.process_candle_direction()
         self.clean_dataframe()
-        #self.replace_candle_direction()
+        self.replace_candle_direction()
         self.convert_boolean_to_int()
         self.replace_position_values()
         self.process_columns_based_on_mean()
+        self.create_master_signal()
         self.save_to_csv()
 
 
@@ -1421,4 +1437,9 @@ class StockDataPipeline:
         data_processor.process_all()
 
         self.df_new.to_csv(os.path.join('artifacts', 'df_new.csv'), index=True)
+
+if __name__ == "__main__":
+    train_pipeline = StockDataPipeline(ticker='NVDA', period='5d', interval='5m')
+    train_pipeline.run_pipeline()
+        
 
