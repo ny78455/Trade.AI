@@ -107,6 +107,9 @@ class RunVisPipeline:
             # Filter based on datetime range
             concatenated_df_new_filtered = concatenated_df_new.loc[x:y]
 
+            sell_signals = concatenated_df_new_filtered[concatenated_df_new_filtered['Prediction'] == 1]
+            buy_signals = concatenated_df_new_filtered[concatenated_df_new_filtered['Prediction'] == 2]
+
             fig = go.Figure(data=[go.Candlestick(
                 x=concatenated_df_new_filtered.index,
                 open=concatenated_df_new_filtered['Open'],
@@ -133,18 +136,46 @@ class RunVisPipeline:
             ))
 
             # Add prediction points
+
+# Plot Sell Signal
             fig.add_trace(go.Scatter(
-    x=concatenated_df_new_filtered.index,
-    y=concatenated_df_new_filtered['pointpos'],
-    mode="markers",
-    marker=dict(
-        size=8,
-        color=np.where(concatenated_df_new_filtered['Prediction'] == 1, "red",
-                       np.where(concatenated_df_new_filtered['Prediction'] == 2, "purple", "blue")),
-        line=dict(width=1, color='DarkSlateGrey')
-    ),
-    name="Signal"
-))
+                x=sell_signals.index,
+                y=sell_signals['pointpos'],
+                mode="markers",
+                marker=dict(
+                    size=8,
+                    color="cyan",  # Gold color for sell signals
+                    line=dict(width=1, color='DarkSlateGrey')
+                ),
+                name="Sell Signal"
+            ))
+
+# Plot Buy Signal
+            fig.add_trace(go.Scatter(
+                x=buy_signals.index,
+                y=buy_signals['pointpos'],
+                mode="markers",
+                marker=dict(
+                    size=8,
+                    color="MediumPurple",  # Cyan color for buy signals
+                    line=dict(width=1, color='DarkSlateGrey')
+                ),
+                name="Buy Signal"
+            ))
+
+# Plot Buy Signal
+            fig.add_trace(go.Scatter(
+                x=concatenated_df_new_filtered.index,
+                y=concatenated_df_new_filtered['pointpos'],
+                mode="markers",
+                marker=dict(
+                    size=8,
+                    color=np.where(concatenated_df_new_filtered['Prediction'] == 2, "MediumPurple", 
+                                    np.where(concatenated_df_new_filtered['Prediction'] == 1, "cyan", "gray")),
+                    line=dict(width=1, color='DarkSlateGrey')
+                ),
+                name="Buy Signal"
+            ))
 
             # Add volume bars
             fig.add_trace(go.Bar(

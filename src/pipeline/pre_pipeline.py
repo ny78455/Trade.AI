@@ -1267,11 +1267,11 @@ class DataProcessor:
         self.df_cleaned['master_signal'] = 0
     
     # Identify consecutive patterns in 'Candle_direction'
-        consecutive_zeros = self.df_cleaned['Candle_direction'].rolling(3).sum() == 0
-        self.df_cleaned.loc[consecutive_zeros.shift(-3).fillna(False), 'master_signal'] = 1
+        consecutive_zeros = self.df_cleaned['Candle_direction'].rolling(5).sum() == 0
+        self.df_cleaned.loc[consecutive_zeros.shift(-5).fillna(False), 'master_signal'] = 1
     
-        consecutive_ones = self.df_cleaned['Candle_direction'].rolling(3).sum() == 3
-        self.df_cleaned.loc[consecutive_ones.shift(-3).fillna(False), 'master_signal'] = 2
+        consecutive_ones = self.df_cleaned['Candle_direction'].rolling(5).sum() == 5
+        self.df_cleaned.loc[consecutive_ones.shift(-5).fillna(False), 'master_signal'] = 2
 
     
 
